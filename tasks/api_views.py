@@ -87,3 +87,68 @@ def user_profile(request):
     """
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
+
+# Task CRUD API Views
+# Learning how to build a complete REST API for task management
+
+class TaskListCreateView(generics.ListCreateAPIView):
+    """
+    GET /api/tasks/ - List all tasks for the current user
+    POST /api/tasks/ - Create a new task
+    """
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Only show tasks belonging to the current user
+        return Task.objects.filter(user=self.request.user)
+    
+    def get_serializer_class(self):
+        # Use different serializer for creation
+        if self.request.method == 'POST':
+            return TaskCreateSerializer
+        return TaskSerializer
+    
+    def perform_create(self, serializer):
+        # Automatically assign the task to the current user
+        serializer.save(user=self.request.user)
+
+class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET /api/tasks/{id}/ - Get specific task
+    PUT /api/tasks/{id}/ - Update specific task
+    DELETE /api/tasks/{id}/ - Delete specific task
+    """
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Users can only access their own tasks
+        return Task.objects.filter(user=self.request.user)
+
+@api_view(['PATCH'])
+def toggle_task_status(request, task_id):
+    """
+    Toggle task between pending and completed
+    PATCH /api/tasks/{id}/toggle/
+    """
+    try:
+        task = Task.objects.get(id=task_id, user=request.user)
+    except Task.DoesNotExist:
+        return Response({'error': 'Task not found'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    
+    # Toggle status
+    if task.status == 'pending':
+        task.status = 'completed'
+        message = 'Task marked as completed!'
+    else:
+        task.status = 'pending'
+        message = 'Task marked as pending!'
+    
+    task.save()
+    
+    return Response({
+        'message': message,
+        'task': TaskSerializer(task).data
+    })

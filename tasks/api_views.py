@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import models
 from .models import Task
+from .permissions import IsTaskOwner
 from .serializers import (
     UserRegistrationSerializer, 
     UserSerializer, 
@@ -23,19 +24,29 @@ def register_user(request):
     User registration endpoint
     POST /api/register/
     """
-    serializer = UserRegistrationSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        # Create authentication token for immediate login
-        token, created = Token.objects.get_or_create(user=user)
+    try:
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            # Create authentication token for immediate login
+            token, created = Token.objects.get_or_create(user=user)
+            
+            return Response({
+                'message': 'Registration successful!',
+                'user': UserSerializer(user).data,
+                'token': token.key
+            }, status=status.HTTP_201_CREATED)
         
         return Response({
-            'message': 'Registration successful!',
-            'user': UserSerializer(user).data,
-            'token': token.key
-        }, status=status.HTTP_201_CREATED)
+            'error': 'Registration failed',
+            'details': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'error': 'Registration failed due to server error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])  # Anyone can login
@@ -76,9 +87,15 @@ def logout_user(request):
         # Delete the user's token to log them out
         request.user.auth_token.delete()
         return Response({'message': 'Logged out successfully'})
-    except:
-        return Response({'error': 'Error logging out'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
+    except AttributeError:
+        return Response({
+            'error': 'No active session found'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'error': 'Logout failed',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def user_profile(request):
@@ -169,7 +186,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     DELETE /api/tasks/{id}/ - Delete specific task
     """
     serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsTaskOwner]
     
     def get_queryset(self):
         # Users can only access their own tasks

@@ -1,11 +1,15 @@
 # Task Management API
 
-A simple Django REST API for managing tasks. Supports basic CRUD operations.
+A comprehensive Django REST API for managing tasks with user authentication, filtering, and statistics.
 
 ## Features
-- Create, Read, Update, Delete tasks
-- Django REST Framework
-- Organized project structure
+- User registration and authentication with token-based auth
+- Complete CRUD operations for tasks
+- Task filtering by status, priority, due date
+- Search functionality in task titles and descriptions
+- Task statistics and analytics
+- User-specific task management
+- Overdue task tracking
 
 ## Setup
 
@@ -21,7 +25,7 @@ A simple Django REST API for managing tasks. Supports basic CRUD operations.
    ```
 3. **Install dependencies:**
    ```sh
-   pip install django djangorestframework
+   pip install -r requirements.txt
    ```
 4. **Apply migrations:**
    ```sh
@@ -34,11 +38,28 @@ A simple Django REST API for managing tasks. Supports basic CRUD operations.
 
 ## API Endpoints
 
-- `GET /tasks/` - List all tasks
-- `POST /tasks/` - Create a new task
-- `GET /tasks/<id>/` - Retrieve a task
-- `PUT /tasks/<id>/` - Update a task
-- `DELETE /tasks/<id>/` - Delete a task
+### Authentication
+- `POST /api/register/` - User registration
+- `POST /api/login/` - User login
+- `POST /api/logout/` - User logout
+- `GET /api/profile/` - Get user profile
+
+### Tasks
+- `GET /api/tasks/` - List user's tasks with filtering
+- `POST /api/tasks/` - Create a new task
+- `GET /api/tasks/<id>/` - Retrieve specific task
+- `PUT /api/tasks/<id>/` - Update specific task
+- `DELETE /api/tasks/<id>/` - Delete specific task
+- `PATCH /api/tasks/<id>/toggle/` - Toggle task completion status
+- `GET /api/tasks/stats/` - Get task statistics
+
+### Query Parameters for Task List
+- `status` - Filter by 'pending' or 'completed'
+- `priority` - Filter by 'low', 'medium', or 'high'
+- `search` - Search in title and description
+- `due_date` - Filter by specific date (YYYY-MM-DD)
+- `overdue` - Show overdue tasks (true/false)
+- `due_today` - Show tasks due today (true/false)
 
 ## Project Structure
 ```
@@ -47,8 +68,11 @@ task_management/   # Django project settings
   urls.py
 
 tasks/             # App for task management
-  models.py
-  views.py
-  urls.py
+  models.py        # Task model with user relationships
+  serializers.py   # API serializers
+  api_views.py     # REST API views
+  api_urls.py      # API URL patterns
+  permissions.py   # Custom permissions
+  views.py         # Traditional views
+  urls.py          # Traditional URL patterns
   admin.py
-```

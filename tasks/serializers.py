@@ -15,6 +15,22 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Basic serializer for updating user stuff
+    Just email and names - keeping it simple for now
+    """
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name']
+    
+    def validate_email(self, value):
+        """Make sure email isnt taken by someone else"""
+        user = self.instance
+        if User.objects.exclude(pk=user.pk).filter(email=value).exists():
+            raise serializers.ValidationError("Someone already has this email")
+        return value
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
     Serializer for user registration

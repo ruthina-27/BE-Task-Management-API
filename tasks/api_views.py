@@ -10,6 +10,7 @@ from .permissions import IsTaskOwner
 from .serializers import (
     UserRegistrationSerializer, 
     UserSerializer, 
+    UserUpdateSerializer,
     TaskSerializer, 
     TaskCreateSerializer
 )
@@ -97,14 +98,93 @@ def logout_user(request):
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 def user_profile(request):
     """
-    Get current user's profile
-    GET /api/profile/
+    Get or update user profile - trying to make it work like the tutorials
+    GET /api/profile/ - show my info
+    PUT /api/profile/ - update my info
     """
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
+    if request.method == 'GET':
+        # just return user data - pretty basic stuff
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        # update profile - learned this from class examples
+        serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'Profile updated!',
+                'user': UserSerializer(request.user).data
+            })
+        return Response({
+            'error': 'Update failed',
+            'details': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+def delete_user_account(request):
+    """
+    Delete user account - hope this works correctly
+    DELETE /api/profile/delete/
+    This should delete everything including tasks (CASCADE thing from class)
+    """
+    try:
+        user = request.user
+        username = user.username
+        # delete user - should delete tasks too because of CASCADE
+        user.delete()
+        
+        return Response({
+            'message': f'Account {username} deleted'
+        })
+    except Exception as e:
+        return Response({
+            'error': 'Delete failed',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def change_password(request):
+    """
+    Change password - basic implementation
+    POST /api/profile/change-password/
+    Need old password and new password twice to make sure
+    """
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
+    
+    # basic validation - keeping it simple
+    if not all([old_password, new_password, confirm_password]):
+        return Response({
+            'error': 'Need all password fields'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if new_password != confirm_password:
+        return Response({
+            'error': 'Passwords dont match'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not request.user.check_password(old_password):
+        return Response({
+            'error': 'Wrong current password'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if len(new_password) < 8:
+        return Response({
+            'error': 'Password too short (need 8+ chars)'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # change password - django handles the hashing
+    request.user.set_password(new_password)
+    request.user.save()
+    
+    return Response({
+        'message': 'Password changed successfully'
+    })
 
 # Task CRUD API Views
 # Complete REST API for task management

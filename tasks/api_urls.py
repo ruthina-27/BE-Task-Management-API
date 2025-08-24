@@ -10,6 +10,8 @@ urlpatterns = [
     path('login/', api_views.login_user, name='api_login'),
     path('logout/', api_views.logout_user, name='api_logout'),
     path('profile/', api_views.user_profile, name='api_profile'),
+    path('profile/delete/', api_views.delete_user_account, name='api_delete_account'),
+    path('profile/change-password/', api_views.change_password, name='api_change_password'),
     
     # Task CRUD endpoints
     path('tasks/', api_views.TaskListCreateView.as_view(), name='api_task_list'),

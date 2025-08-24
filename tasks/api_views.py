@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db import models
 from .models import Task
 from .serializers import (
     UserRegistrationSerializer, 
@@ -95,13 +96,38 @@ class TaskListCreateView(generics.ListCreateAPIView):
     """
     GET /api/tasks/ - List all tasks for the current user
     POST /api/tasks/ - Create a new task
+    
+    Query parameters:
+    - status: filter by 'pending' or 'completed'
+    - priority: filter by 'low', 'medium', or 'high'
+    - search: search in title and description
     """
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         # Only show tasks belonging to the current user
-        return Task.objects.filter(user=self.request.user)
+        queryset = Task.objects.filter(user=self.request.user)
+        
+        # Filter by status
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        # Filter by priority
+        priority = self.request.query_params.get('priority')
+        if priority:
+            queryset = queryset.filter(priority=priority)
+        
+        # Search functionality
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(title__icontains=search) | 
+                models.Q(description__icontains=search)
+            )
+        
+        return queryset
     
     def get_serializer_class(self):
         # Use different serializer for creation

@@ -262,3 +262,60 @@ def task_statistics(request):
         },
         'completion_rate': round((completed_tasks / total_tasks * 100), 2) if total_tasks > 0 else 0
     })
+
+@api_view(['PATCH'])
+def bulk_update_tasks(request):
+    """
+    Bulk update multiple tasks
+    PATCH /api/tasks/bulk/
+    Body: {"task_ids": [1, 2, 3], "status": "completed"}
+    """
+    task_ids = request.data.get('task_ids', [])
+    update_data = {}
+    
+    # Extract update fields
+    if 'status' in request.data:
+        update_data['status'] = request.data['status']
+    if 'priority' in request.data:
+        update_data['priority'] = request.data['priority']
+    
+    if not task_ids or not update_data:
+        return Response({
+            'error': 'task_ids and update fields required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update tasks belonging to current user
+    updated_count = Task.objects.filter(
+        id__in=task_ids,
+        user=request.user
+    ).update(**update_data)
+    
+    return Response({
+        'message': f'{updated_count} tasks updated successfully',
+        'updated_count': updated_count
+    })
+
+@api_view(['DELETE'])
+def bulk_delete_tasks(request):
+    """
+    Bulk delete multiple tasks
+    DELETE /api/tasks/bulk/
+    Body: {"task_ids": [1, 2, 3]}
+    """
+    task_ids = request.data.get('task_ids', [])
+    
+    if not task_ids:
+        return Response({
+            'error': 'task_ids required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Delete tasks belonging to current user
+    deleted_count, _ = Task.objects.filter(
+        id__in=task_ids,
+        user=request.user
+    ).delete()
+    
+    return Response({
+        'message': f'{deleted_count} tasks deleted successfully',
+        'deleted_count': deleted_count
+    })

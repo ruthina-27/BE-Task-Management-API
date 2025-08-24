@@ -1,20 +1,18 @@
 from django.contrib import admin
 from .models import Task
 
-# Register Task model for admin interface
-# Basic admin setup for testing
-
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ['title', 'priority', 'status', 'due_date', 'created_at']
-    list_filter = ['status', 'priority', 'due_date']
-    search_fields = ['title', 'description']
+    list_display = ['title', 'user', 'status', 'priority', 'due_date', 'created_at']
+    list_filter = ['status', 'priority', 'due_date', 'created_at']
+    search_fields = ['title', 'description', 'user__username']
+    list_editable = ['status', 'priority']
+    date_hierarchy = 'due_date'
     ordering = ['-created_at']
     
-    # Simple fieldsets for better organization
     fieldsets = (
         ('Basic Info', {
-            'fields': ('title', 'description')
+            'fields': ('title', 'description', 'user')
         }),
         ('Task Details', {
             'fields': ('due_date', 'priority', 'status')

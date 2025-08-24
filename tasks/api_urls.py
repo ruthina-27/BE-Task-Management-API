@@ -15,4 +15,5 @@ urlpatterns = [
     path('tasks/', api_views.TaskListCreateView.as_view(), name='api_task_list'),
     path('tasks/<int:pk>/', api_views.TaskDetailView.as_view(), name='api_task_detail'),
     path('tasks/<int:task_id>/toggle/', api_views.toggle_task_status, name='api_task_toggle'),
+    path('tasks/stats/', api_views.task_statistics, name='api_task_stats'),
 ]

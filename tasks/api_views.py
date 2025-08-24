@@ -101,6 +101,9 @@ class TaskListCreateView(generics.ListCreateAPIView):
     - status: filter by 'pending' or 'completed'
     - priority: filter by 'low', 'medium', or 'high'
     - search: search in title and description
+    - due_date: filter by specific date (YYYY-MM-DD)
+    - overdue: show overdue tasks (true/false)
+    - due_today: show tasks due today (true/false)
     """
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -126,6 +129,26 @@ class TaskListCreateView(generics.ListCreateAPIView):
                 models.Q(title__icontains=search) | 
                 models.Q(description__icontains=search)
             )
+        
+        # Due date filtering
+        due_date = self.request.query_params.get('due_date')
+        if due_date:
+            queryset = queryset.filter(due_date=due_date)
+        
+        # Overdue tasks
+        overdue = self.request.query_params.get('overdue')
+        if overdue == 'true':
+            from datetime import date
+            queryset = queryset.filter(
+                status='pending',
+                due_date__lt=date.today()
+            )
+        
+        # Due today
+        due_today = self.request.query_params.get('due_today')
+        if due_today == 'true':
+            from datetime import date
+            queryset = queryset.filter(due_date=date.today())
         
         return queryset
     
@@ -177,4 +200,48 @@ def toggle_task_status(request, task_id):
     return Response({
         'message': message,
         'task': TaskSerializer(task).data
+    })
+
+@api_view(['GET'])
+def task_statistics(request):
+    """
+    Get task statistics for the current user
+    GET /api/tasks/stats/
+    """
+    from datetime import date
+    user_tasks = Task.objects.filter(user=request.user)
+    
+    # Basic counts
+    total_tasks = user_tasks.count()
+    pending_tasks = user_tasks.filter(status='pending').count()
+    completed_tasks = user_tasks.filter(status='completed').count()
+    
+    # Priority breakdown
+    high_priority = user_tasks.filter(priority='high').count()
+    medium_priority = user_tasks.filter(priority='medium').count()
+    low_priority = user_tasks.filter(priority='low').count()
+    
+    # Overdue tasks
+    overdue_tasks = user_tasks.filter(
+        status='pending',
+        due_date__lt=date.today()
+    ).count()
+    
+    # Due today
+    due_today = user_tasks.filter(
+        due_date=date.today()
+    ).count()
+    
+    return Response({
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'completed_tasks': completed_tasks,
+        'overdue_tasks': overdue_tasks,
+        'due_today': due_today,
+        'priority_breakdown': {
+            'high': high_priority,
+            'medium': medium_priority,
+            'low': low_priority
+        },
+        'completion_rate': round((completed_tasks / total_tasks * 100), 2) if total_tasks > 0 else 0
     })

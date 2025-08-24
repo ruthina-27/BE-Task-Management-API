@@ -12,8 +12,8 @@ from .serializers import (
     TaskCreateSerializer
 )
 
-# Student project: Learning Django REST Framework API views
-# These handle HTTP requests and return JSON responses
+# Django REST Framework API views
+# Handle HTTP requests and return JSON responses
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])  # Anyone can register
@@ -89,7 +89,7 @@ def user_profile(request):
     return Response(serializer.data)
 
 # Task CRUD API Views
-# Learning how to build a complete REST API for task management
+# Complete REST API for task management
 
 class TaskListCreateView(generics.ListCreateAPIView):
     """

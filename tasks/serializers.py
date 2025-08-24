@@ -2,8 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Task
 
-# Student project: Learning how to convert Django models to JSON
-# Serializers help convert between Python objects and JSON for the API
+# Django REST Framework serializers
+# Convert between Python objects and JSON for the API
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -28,13 +28,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name']
     
     def validate(self, data):
-        """Check that passwords match - learned this validation pattern"""
+        """Check that passwords match"""
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError("Passwords don't match!")
         return data
     
     def create(self, validated_data):
-        """Create user with hashed password - important for security!"""
+        """Create user with hashed password"""
         validated_data.pop('password_confirm')  # remove confirmation field
         user = User.objects.create_user(**validated_data)
         return user
@@ -45,7 +45,7 @@ class TaskSerializer(serializers.ModelSerializer):
     Automatically associates tasks with the logged-in user
     """
     user = UserSerializer(read_only=True)  # show user info but don't allow editing
-    is_overdue = serializers.ReadOnlyField()  # include our custom method
+    is_overdue = serializers.ReadOnlyField()  # include custom method
     
     class Meta:
         model = Task

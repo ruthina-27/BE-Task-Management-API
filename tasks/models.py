@@ -4,8 +4,8 @@ from django.utils import timezone
 from datetime import date
 
 # Task model for our task management system
-# Student project: Building a simple task tracker for my portfolio
-# Learning Django models, relationships, and API development
+# Simple task tracker with basic CRUD operations
+# Django models with user relationships
 
 class Task(models.Model):
     # Priority choices - keeping it simple
@@ -32,34 +32,34 @@ class Task(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
-    # Auto timestamps (learned this is good practice in class)
+    # Auto timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['-created_at']  # newest tasks first (makes sense for a todo app)
-        unique_together = ['user', 'title']  # student can't have duplicate task names
+        ordering = ['-created_at']  # newest tasks first
+        unique_together = ['user', 'title']  # prevent duplicate task names per user
     
     def __str__(self):
-        return f"{self.title} ({self.user.username})"  # show which student owns the task
+        return f"{self.title} ({self.user.username})"
     
-    # Basic validation - learned this from Django docs
+    # Basic validation
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.due_date and self.due_date < date.today():
             raise ValidationError('Due date cannot be in the past!')
     
-    # Helper method to check if task is overdue (useful for student deadlines!)
+    # Helper method to check if task is overdue
     def is_overdue(self):
         if self.status == 'completed':
             return False
         return self.due_date < date.today()
     
-    # Method for Bootstrap CSS classes (learned this for styling)
+    # Method for Bootstrap CSS classes
     def get_priority_class(self):
         if self.priority == 'high':
-            return 'danger'  # red for urgent assignments
+            return 'danger'
         elif self.priority == 'medium':
-            return 'warning'  # yellow for normal tasks
+            return 'warning'
         else:
-            return 'info'  # blue for low priority
+            return 'info'

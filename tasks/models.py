@@ -7,6 +7,20 @@ from datetime import date
 # Simple task tracker with basic CRUD operations
 # Django models with user relationships
 
+class Category(models.Model):
+    """Task categories like Work, Personal, etc."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='categories')
+    name = models.CharField(max_length=100)
+    color = models.CharField(max_length=7, default='#007bff', help_text="Hex color code")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['user', 'name']
+        verbose_name_plural = 'Categories'
+    
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+
 class Task(models.Model):
     # Priority choices - keeping it simple
     PRIORITY_CHOICES = [
@@ -32,9 +46,13 @@ class Task(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
+    # Category association - optional
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
+    
     # Auto timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True, help_text="When was this completed?")
     
     class Meta:
         ordering = ['-created_at']  # newest tasks first

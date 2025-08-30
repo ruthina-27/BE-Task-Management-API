@@ -5,14 +5,16 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import models
-from .models import Task
+from django.utils import timezone
+from .models import Task, Category
 from .permissions import IsTaskOwner
 from .serializers import (
     UserRegistrationSerializer, 
     UserSerializer, 
     UserUpdateSerializer,
     TaskSerializer, 
-    TaskCreateSerializer
+    TaskCreateSerializer,
+    CategorySerializer
 )
 
 # Django REST Framework API views
@@ -146,6 +148,33 @@ def delete_user_account(request):
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Category Management Views
+class CategoryListCreateView(generics.ListCreateAPIView):
+    """
+    GET /api/categories/ - List user categories
+    POST /api/categories/ - Create new category
+    """
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET /api/categories/{id}/ - Get specific category
+    PUT /api/categories/{id}/ - Update category
+    DELETE /api/categories/{id}/ - Delete category
+    """
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+
 @api_view(['POST'])
 def change_password(request):
     """
@@ -262,7 +291,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     GET /api/tasks/{id}/ - Get specific task
-    PUT /api/tasks/{id}/ - Update specific task
+    PUT /api/tasks/{id}/ - Update specific task (but not if completed)
     DELETE /api/tasks/{id}/ - Delete specific task
     """
     serializer_class = TaskSerializer
@@ -271,6 +300,15 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         # Users can only access their own tasks
         return Task.objects.filter(user=self.request.user)
+    
+    def update(self, request, *args, **kwargs):
+        # Prevent editing completed tasks unless reverting status
+        task = self.get_object()
+        if task.status == 'completed' and request.data.get('status') != 'pending':
+            return Response({
+                'error': 'Cannot edit completed tasks. Mark as pending first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
 
 @api_view(['PATCH'])
 def toggle_task_status(request, task_id):
@@ -284,12 +322,14 @@ def toggle_task_status(request, task_id):
         return Response({'error': 'Task not found'}, 
                        status=status.HTTP_404_NOT_FOUND)
     
-    # Toggle status
+    # Toggle status with completion timestamp
     if task.status == 'pending':
         task.status = 'completed'
+        task.completed_at = timezone.now()  # add completion timestamp
         message = 'Task marked as completed!'
     else:
         task.status = 'pending'
+        task.completed_at = None  # clear completion timestamp
         message = 'Task marked as pending!'
     
     task.save()

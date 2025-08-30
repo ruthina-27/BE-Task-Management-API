@@ -20,4 +20,8 @@ urlpatterns = [
     path('tasks/stats/', api_views.task_statistics, name='api_task_stats'),
     path('tasks/bulk/update/', api_views.bulk_update_tasks, name='api_bulk_update'),
     path('tasks/bulk/delete/', api_views.bulk_delete_tasks, name='api_bulk_delete'),
+    
+    # Category endpoints
+    path('categories/', api_views.CategoryListCreateView.as_view(), name='api_category_list'),
+    path('categories/<int:pk>/', api_views.CategoryDetailView.as_view(), name='api_category_detail'),
 ]

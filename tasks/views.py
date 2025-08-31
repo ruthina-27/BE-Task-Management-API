@@ -79,22 +79,37 @@ def task_delete(request, task_id):
 
 # Simple home page
 def home(request):
-    """Basic home page with task summary"""
-    total_tasks = Task.objects.count()
-    pending_tasks = Task.objects.filter(status='pending').count()
-    completed_tasks = Task.objects.filter(status='completed').count()
-    
-    # Count overdue tasks (basic logic)
-    from datetime import date
-    overdue_tasks = Task.objects.filter(
-        status='pending',
-        due_date__lt=date.today()
-    ).count()
-    
-    context = {
-        'total_tasks': total_tasks,
-        'pending_tasks': pending_tasks,
-        'completed_tasks': completed_tasks,
-        'overdue_tasks': overdue_tasks,
-    }
-    return render(request, 'tasks/home.html', context)
+    """API Status and Documentation"""
+    from django.http import JsonResponse
+    return JsonResponse({
+        'success': True,
+        'message': 'Task Management API v1.0 - Running Successfully',
+        'status': 'online',
+        'endpoints': {
+            'authentication': {
+                'register': '/api/register/',
+                'login': '/api/login/',
+                'logout': '/api/logout/',
+                'profile': '/api/profile/'
+            },
+            'tasks': {
+                'list_create': '/api/tasks/',
+                'detail': '/api/tasks/{id}/',
+                'toggle_status': '/api/tasks/{id}/toggle/',
+                'statistics': '/api/tasks/stats/',
+                'bulk_operations': '/api/tasks/bulk/'
+            },
+            'categories': {
+                'list_create': '/api/categories/',
+                'detail': '/api/categories/{id}/'
+            }
+        },
+        'features': [
+            'User Authentication (Token-based)',
+            'Task CRUD Operations',
+            'Task Filtering & Sorting',
+            'Task Status Management',
+            'User Isolation & Permissions',
+            'Completion Timestamps'
+        ]
+    })

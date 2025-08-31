@@ -21,7 +21,7 @@ from .serializers import (
 # Handle HTTP requests and return JSON responses
 
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])  # Anyone can register
+@permission_classes([permissions.AllowAny])  # so that annyone can register
 def register_user(request):
     """
     User registration endpoint
@@ -35,12 +35,16 @@ def register_user(request):
             token, created = Token.objects.get_or_create(user=user)
             
             return Response({
-                'message': 'Registration successful!',
-                'user': UserSerializer(user).data,
-                'token': token.key
+                'success': True,
+                'message': 'User registered successfully!',
+                'data': {
+                    'user': UserSerializer(user).data,
+                    'token': token.key
+                }
             }, status=status.HTTP_201_CREATED)
         
         return Response({
+            'success': False,
             'error': 'Registration failed',
             'details': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
@@ -71,12 +75,16 @@ def login_user(request):
     if user:
         token, created = Token.objects.get_or_create(user=user)
         return Response({
+            'success': True,
             'message': 'Login successful!',
-            'user': UserSerializer(user).data,
-            'token': token.key
+            'data': {
+                'user': UserSerializer(user).data,
+                'token': token.key
+            }
         })
     
     return Response({
+        'success': False,
         'error': 'Invalid credentials'
     }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -89,7 +97,10 @@ def logout_user(request):
     try:
         # Delete the user's token to log them out
         request.user.auth_token.delete()
-        return Response({'message': 'Logged out successfully'})
+        return Response({
+            'success': True,
+            'message': 'Logged out successfully'
+        })
     except AttributeError:
         return Response({
             'error': 'No active session found'
@@ -276,6 +287,25 @@ class TaskListCreateView(generics.ListCreateAPIView):
             from datetime import date
             queryset = queryset.filter(due_date=date.today())
         
+        # Sorting functionality
+        sort_by = self.request.query_params.get('sort_by')
+        if sort_by == 'due_date':
+            queryset = queryset.order_by('due_date')
+        elif sort_by == 'priority':
+            # Custom ordering: high -> medium -> low
+            priority_order = models.Case(
+                models.When(priority='high', then=models.Value(1)),
+                models.When(priority='medium', then=models.Value(2)),
+                models.When(priority='low', then=models.Value(3)),
+                output_field=models.IntegerField()
+            )
+            queryset = queryset.annotate(priority_order=priority_order).order_by('priority_order')
+        elif sort_by == 'created_at':
+            queryset = queryset.order_by('-created_at')
+        else:
+            # Default sorting by creation date (newest first)
+            queryset = queryset.order_by('-created_at')
+        
         return queryset
     
     def get_serializer_class(self):
@@ -304,10 +334,22 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     def update(self, request, *args, **kwargs):
         # Prevent editing completed tasks unless reverting status
         task = self.get_object()
-        if task.status == 'completed' and request.data.get('status') != 'pending':
+        new_status = request.data.get('status')
+        
+        # If task is completed and we're not changing status to pending, block the edit
+        if task.status == 'completed' and new_status != 'pending':
             return Response({
                 'error': 'Cannot edit completed tasks. Mark as pending first.'
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Handle completion timestamp when status changes
+        if new_status == 'completed' and task.status != 'completed':
+            # Task is being marked as completed
+            request.data['completed_at'] = timezone.now().isoformat()
+        elif new_status == 'pending' and task.status == 'completed':
+            # Task is being reverted to pending
+            request.data['completed_at'] = None
+        
         return super().update(request, *args, **kwargs)
 
 @api_view(['PATCH'])
@@ -335,8 +377,11 @@ def toggle_task_status(request, task_id):
     task.save()
     
     return Response({
+        'success': True,
         'message': message,
-        'task': TaskSerializer(task).data
+        'data': {
+            'task': TaskSerializer(task).data
+        }
     })
 
 @api_view(['GET'])
@@ -403,6 +448,12 @@ def bulk_update_tasks(request):
         return Response({
             'error': 'task_ids and update fields required'
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Handle completion timestamp for bulk status updates
+    if update_data.get('status') == 'completed':
+        update_data['completed_at'] = timezone.now()
+    elif update_data.get('status') == 'pending':
+        update_data['completed_at'] = None
     
     # Update tasks belonging to current user
     updated_count = Task.objects.filter(

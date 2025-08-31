@@ -213,7 +213,7 @@ class TaskAPITest(APITestCase):
             due_date=date.today() + timedelta(days=1)
         )
         
-        # Try to access other user's task
+        # this try to access other user's task
         url = reverse('api_task_detail', kwargs={'pk': other_task.id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

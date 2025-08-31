@@ -1,0 +1,20 @@
+[build]
+  publish = "staticfiles"
+  command = "python manage.py collectstatic --noinput"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+  DJANGO_SETTINGS_MODULE = "task_management.settings"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/django/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/api/:splat"
+  status = 200
+
+[functions]
+  directory = "netlify/functions"

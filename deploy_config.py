@@ -28,20 +28,11 @@ DATABASES = {
     }
 }
 
-# For PostgreSQL on Heroku (uncomment if using Heroku Postgres)
-# import dj_database_url
-# DATABASES['default'] = dj_database_url.config(
-#     default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-#     conn_max_age=600
-# )
-
 # Static files configuration
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# CORS settings for frontend integration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React default
+    "http://localhost:3000",  
     "http://127.0.0.1:3000",
 ]
 
